@@ -1,0 +1,27 @@
+chip = atmega328p
+programmer = arduino
+dev = /dev/ttyUSB0
+baud = 115200
+
+# F_CPU = crystal clock speed (see on board)
+cc = avr-g++
+cflags = -mmcu=$chip -Os -DF_CPU=16000000UL
+
+rule compile
+  depfile = $out.d
+  command = $cc -MD -MF $out.d $cflags -c $in -o $out
+
+rule link
+  command = $cc $cflags $in -o $out
+
+rule make_flash
+  command = avr-objcopy -O ihex -R .eeprom $in $out
+
+rule upload
+  command = avrdude -F -V -p $chip -c $programmer -P $dev -b $baud -U flash:w:$in
+
+build build/program.o: compile src/main.cpp
+build build/program.elf: link build/program.o
+build build/program.hex: make_flash build/program.elf
+
+build $$: upload build/program.hex
